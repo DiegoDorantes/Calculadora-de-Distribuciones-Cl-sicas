@@ -86,20 +86,17 @@ function InputBox({ label, value, onChange, type = "number", step = "1", placeho
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// 3. COMPONENTES MATEMÁTICOS TIPO "LATEX" (¡NUEVO!)
+// 3. COMPONENTES MATEMÁTICOS TIPO "LATEX"
 // ══════════════════════════════════════════════════════════════════════════════
 
-// Texto con tipografía matemática clásica
 function MathText({ children }) {
   return <span style={{ fontFamily: "'Latin Modern Math', 'Cambria Math', 'Times New Roman', serif", fontSize: "1.15em", color: "#111" }}>{children}</span>;
 }
 
-// Variables en itálica matemática (como la 'x' o la 'p')
 function V({ children }) {
   return <i style={{ fontFamily: "'Latin Modern Math', 'Cambria Math', 'Times New Roman', serif", fontStyle: "italic", paddingRight: "1px" }}>{children}</i>;
 }
 
-// Generador de Fracciones reales
 function MathFrac({ num, den }) {
   return (
     <span style={{ display: "inline-flex", flexDirection: "column", alignItems: "center", verticalAlign: "middle", margin: "0 4px" }}>
@@ -109,7 +106,6 @@ function MathFrac({ num, den }) {
   );
 }
 
-// Generador de Combinatoria con paréntesis grandes
 function MathBinom({ n, k }) {
   return (
     <span style={{ display: "inline-flex", alignItems: "center", verticalAlign: "middle", margin: "0 2px" }}>
@@ -131,8 +127,6 @@ function InfoCard({ title, desc, formula, meanF, varF }) {
         <div style={{ flex: 1 }}>
           <h3 style={{ margin: "0 0 6px 0", fontSize: 15, color: "#0f172a", fontWeight: 700 }}>{title}</h3>
           <p style={{ margin: "0 0 12px 0", fontSize: 13, color: "#475569", lineHeight: 1.5 }}>{desc}</p>
-          
-          {/* Contenedor de Fórmulas Matemáticas */}
           <div style={{ display: "flex", flexWrap: "wrap", gap: 24, alignItems: "center", background: "#fff", padding: "14px 18px", borderRadius: 8, border: "1px solid #e2e8f0", boxShadow: "inset 0 1px 2px rgba(0,0,0,0.02)" }}>
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
               <div style={{ color: "#64748b", fontWeight: 700, fontSize: 10, marginBottom: 8, fontFamily: "sans-serif", textTransform: "uppercase", letterSpacing: "0.5px" }}>Fórmula (PMF)</div> 
@@ -238,7 +232,6 @@ function MultinomialMarginalChart({ n, categories, valid }) {
   return (
     <Card>
       <StepHeader number="📈" title="Distribuciones Marginales (Frecuencia Relativa)" subtitle="Visualiza el comportamiento individual de cada categoría simulando la imagen proporcionada." />
-      
       <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 16, padding: "10px", background: "#f9fafb", borderRadius: 8, border: "1px solid #e5e7eb" }}>
         {chartData.map((c, i) => (
           <div key={c.id} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 600, color: "#374151" }}>
@@ -247,7 +240,6 @@ function MultinomialMarginalChart({ n, categories, valid }) {
           </div>
         ))}
       </div>
-
       <div style={{ overflowX: "auto", paddingBottom: "10px" }}>
         <div style={{ minWidth: `${(n + 1) * 20}px` }}> 
           <div style={{ display: "flex", alignItems: "flex-end", height: "190px", borderBottom: "2px solid #374151", padding: "0 10px" }}>
@@ -334,8 +326,58 @@ function TargetCard({ table, targetX }) {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// 6. SECCIONES POR DISTRIBUCIÓN CON FÓRMULAS LATEX
+// 6. SECCIONES POR DISTRIBUCIÓN 
 // ══════════════════════════════════════════════════════════════════════════════
+
+// ✨ NUEVA SECCIÓN: POISSON
+function PoissonSection({ params, setParams }) {
+  const lambda = parseFloat(params.lambda) || 0;
+  const targetX = parseInt(params.targetX) || 0;
+  const validLambda = Math.max(0, lambda); // Promedio no puede ser negativo
+
+  const table = useMemo(() => {
+    const rows = [];
+    let cum = 0;
+    let x = 0;
+    // P(0)
+    let prob = Math.exp(-validLambda); 
+    const limitX = Math.max(20, Math.ceil(validLambda + 4 * Math.sqrt(validLambda))); 
+    
+    while (cum < 0.9999 && x <= limitX && rows.length < 400) { 
+      cum += prob;
+      rows.push({ x, prob, cum });
+      x++;
+      // La probabilidad de Poisson iterativa para evitar factoriales enormes: P(x) = P(x-1) * (lambda / x)
+      prob = prob * (validLambda / x); 
+    }
+    return rows;
+  }, [validLambda]);
+
+  return (
+    <>
+      <InfoCard 
+        title="Distribución de Poisson" 
+        desc="Modela la probabilidad de que un número específico de eventos ocurra en un intervalo de tiempo o espacio, conociendo la tasa promedio de ocurrencia (λ)."
+        formula={
+          <MathText>P(<V>X</V>=<V>x</V>) = <MathFrac num={<><V>e</V><sup>−<V>λ</V></sup> <V>λ</V><sup><V>x</V></sup></>} den={<><V>x</V>!</>} /></MathText>
+        }
+        meanF={<MathText><V>λ</V></MathText>}
+        varF={<MathText><V>λ</V></MathText>}
+      />
+      <Card>
+        <StepHeader number="2" title="Parámetros de Poisson" subtitle="Define el promedio y el valor a buscar." />
+        <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
+          <InputBox label="Promedio de eventos (λ)" value={params.lambda} step="0.1" onChange={e => setParams({ ...params, lambda: e.target.value })} />
+          <InputBox label="Éxitos a calcular (x)" value={params.targetX} highlight onChange={e => setParams({ ...params, targetX: e.target.value })} />
+        </div>
+      </Card>
+      <StatsCard mean={validLambda} variance={validLambda} />
+      <TargetCard table={table} targetX={targetX} />
+      <DistributionChart data={table} targetX={targetX} />
+      <DistributionTable rows={table} targetX={targetX} />
+    </>
+  );
+}
 
 function BinomialSection({ params, setParams }) {
   const n = parseInt(params.n) || 0;
@@ -666,18 +708,19 @@ function DistributionTable({ rows, targetX }) {
 // ══════════════════════════════════════════════════════════════════════════════
 
 export default function DistributionsApp() {
-  const [distType, setDistType] = useState("binomial");
+  const [distType, setDistType] = useState("poisson"); // ✨ Inicia en Poisson
 
+  const [poissParams, setPoissParams] = useState({ lambda: "3", targetX: "5" }); // ✨ Estado Poisson
   const [bParams, setBParams] = useState({ n: "10", p: "0.5", targetX: "5" });
   const [gParams, setGParams] = useState({ p: "0.5", targetX: "3" }); 
   const [nbParams, setNbParams] = useState({ k: "3", p: "0.5", targetX: "6" });
   const [hParams, setHParams] = useState({ N: "50", K: "10", n: "5", targetX: "2" });
-  
   const [mParams, setMParams] = useState({
     n: "25", categories: [{ id: 1, p: "0.40", x: "10" }, { id: 2, p: "0.35", x: "10" }, { id: 3, p: "0.25", x: "5" }]
   });
 
   const distOptions = [
+    { id: "poisson", label: "Poisson" }, // ✨ Agregada al menú
     { id: "binomial", label: "Binomial" },
     { id: "geometric", label: "Geométrica" }, 
     { id: "negative", label: "Binomial Negativa" },
@@ -709,6 +752,7 @@ export default function DistributionsApp() {
           </div>
         </Card>
 
+        {distType === "poisson" && <PoissonSection params={poissParams} setParams={setPoissParams} />}
         {distType === "binomial" && <BinomialSection params={bParams} setParams={setBParams} />}
         {distType === "geometric" && <GeometricSection params={gParams} setParams={setGParams} />}
         {distType === "negative" && <NegativeBinomialSection params={nbParams} setParams={setNbParams} />}
